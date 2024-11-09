@@ -1,0 +1,128 @@
+import psutil
+from ping3 import ping
+import time
+import schedule
+from datetime import datetime
+import tkinter as tk
+from tkinter import scrolledtext
+import os
+
+# Directory to save logs
+LOG_DIR = "network_logs"
+os.makedirs(LOG_DIR, exist_ok=True)
+
+
+network_data = {
+    "latency": [],
+    "packet_loss": [],
+    "bandwidth_sent": [],
+    "bandwidth_received": [],
+    "packet_loss_rate": []
+}
+
+
+LATENCY_THRESHOLD = 100  # in milliseconds
+PACKET_LOSS_THRESHOLD = 0.1  # 10% packet loss
+BANDWIDTH_THRESHOLD = 1e6  # 1MBps
+
+
+total_pings = 0
+lost_pings = 0
+
+def log_data(entry, metric):
+    """Log data with a timestamp"""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    network_data[metric].append({"timestamp": timestamp, "value": entry})
+
+    # Save to corresponding text files
+    with open(os.path.join(LOG_DIR, f"{metric}.txt"), "a") as f:
+        f.write(f"{timestamp}: {entry}\n")
+
+def monitor_latency(host="8.8.8.8"):
+    """Monitor latency by pinging a specific IP address"""
+    global total_pings, lost_pings
+    total_pings += 1  # Increment total pings
+    try:
+        latency = ping(host, timeout=2)  # Added timeout to avoid long wait times
+
+        if latency is None:
+            message = f"[ALERT] Host {host} unreachable!\n"
+            lost_pings += 1  # Increment lost pings count
+            log_data(1, "packet_loss")  # Log as 100% packet loss
+        else:
+            latency_ms = latency * 1000  # Convert seconds to milliseconds
+            message = f"Latency to {host}: {latency_ms:.2f} ms\n"
+            log_data(latency_ms, "latency")
+
+            # Check for latency threshold
+            if latency_ms > LATENCY_THRESHOLD:
+                message += f"[ALERT] Latency exceeds threshold: {latency_ms:.2f} ms\n"
+
+    except OSError as e:
+        message = f"[ERROR] Network error while pinging {host}: {e}\n"
+        lost_pings += 1  # Log as packet loss
+        log_data(1, "packet_loss")
+
+    return message
+
+def calculate_packet_loss_rate():
+    """Calculate and print packet loss rate over the monitoring period"""
+    if total_pings > 0:
+        packet_loss_rate = (lost_pings / total_pings) * 100
+        log_data(packet_loss_rate, "packet_loss_rate")
+        return f"Packet Loss Rate: {packet_loss_rate:.2f}%\n"
+    return ""
+
+def monitor_bandwidth():
+    """Monitor bandwidth usage (sent and received bytes)"""
+    net_io = psutil.net_io_counters()
+    sent = net_io.bytes_sent
+    received = net_io.bytes_recv
+
+    log_data(sent, "bandwidth_sent")
+    log_data(received, "bandwidth_received")
+
+    bandwidth_info = f"Sent: {sent / 1e6:.2f} MB, Received: {received / 1e6:.2f} MB\n"
+
+    # Check for bandwidth usage threshold
+    if sent > BANDWIDTH_THRESHOLD:
+        bandwidth_info += f"[ALERT] Bandwidth sent exceeds threshold: {sent / 1e6:.2f} MB\n"
+    if received > BANDWIDTH_THRESHOLD:
+        bandwidth_info += f"[ALERT] Bandwidth received exceeds threshold: {received / 1e6:.2f} MB\n"
+
+    return bandwidth_info
+
+def monitor_network():
+    """Run all monitoring functions and update the GUI"""
+    message = "\n--- Running Network Monitoring ---\n"
+    message += monitor_latency()
+    message += monitor_bandwidth()
+    message += calculate_packet_loss_rate()
+    update_output(message)
+
+def update_output(message):
+    """Update the output text area in the GUI"""
+    output_text.configure(state=tk.NORMAL)
+    output_text.insert(tk.END, message)
+    output_text.configure(state=tk.DISABLED)
+
+# Set up the GUI
+root = tk.Tk()
+root.title("Network Performance Monitor")
+
+output_text = scrolledtext.ScrolledText(root, width=80, height=20, state=tk.DISABLED)
+output_text.pack(padx=10, pady=10)
+
+
+import threading
+def start_monitoring():
+    """Start the monitoring schedule"""
+    schedule.every(10).seconds.do(monitor_network)
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+monitoring_thread = threading.Thread(target=start_monitoring, daemon=True)
+monitoring_thread.start()
+
+root.mainloop()
