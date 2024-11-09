@@ -27,7 +27,6 @@ Customizable Settings: You can modify thresholds for latency, packet loss, and b
 Once the virtual environment is activated (or globally if you chose to skip this step), run the following command to install the necessary dependencies:
 
 bash
-Copy code
 pip install psutil ping3 schedule
 Note: tkinter is included by default in most Python installations. If it’s not already installed, you can install it separately.
 
