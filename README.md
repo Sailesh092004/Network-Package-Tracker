@@ -23,11 +23,13 @@ Logging: Saves network statistics to local text files for historical analysis.
 Graphical User Interface (GUI): Provides a user-friendly interface to display real-time monitoring data.
 Customizable Settings: You can modify thresholds for latency, packet loss, and bandwidth within the code.
 
- Install the Required Packages
+Install the Required Packages
 Once the virtual environment is activated (or globally if you chose to skip this step), run the following command to install the necessary dependencies:
 
 bash
-pip install psutil ping3 schedule
+
+--pip install psutil ping3 schedule
+
 Note: tkinter is included by default in most Python installations. If it’s not already installed, you can install it separately.
 
 Windows:
