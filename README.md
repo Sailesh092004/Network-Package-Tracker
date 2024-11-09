@@ -1,9 +1,6 @@
 # Network-Package-Tracker
 A Python-based network monitoring tool that tracks latency, packet loss, and bandwidth usage with real-time alerts and logging.
 
-
-Sure! Here’s a detailed description and the steps to install the prerequisites for your project, formatted for GitHub.
-
 Network Performance Monitor
 Overview
 The Network Performance Monitor is a Python-based application designed to monitor various aspects of a network’s performance in real-time. This tool tracks network parameters such as:
